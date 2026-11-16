@@ -5,6 +5,7 @@ if (!process.env.JWT_SECRET) throw new Error("Falta JWT_SECRET en el .env");
 module.exports = {
   puerto: Number(process.env.PORT) || 3000,
   db: {
+    ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
     host: process.env.DB_HOST,
     port: Number(process.env.DB_PORT),
     database: process.env.DB_NAME,
