@@ -87,5 +87,6 @@ Los roles disponibles son **Administrador**, **Vendedor**, **Cajero** y **Client
 ## Bitácora
  
 ### 2026-11-16
+- **Sebastian Apablaza**: Implementó `POST /api/v1/auth/registro` usando las validaciones existentes. El backend guarda el usuario en PostgreSQL con la contraseña protegida con bcrypt y asigna el rol `Cliente`. Verificó en EC2 el registro (`201 Created`) y el inicio de sesión con la cuenta creada (`200 OK`).
  
 - **Sebastian Navarro (sebi-nvrro)**: Configuró la base del proyecto (dependencias, variables de entorno y conexión a PostgreSQL con soporte SSL para RDS), creó las tablas de roles y usuarios, montó el servidor Express con manejo global de errores, implementó el inicio de sesión con JWT y las validaciones del registro (RUN, correo y campos obligatorios), agregó usuarios de prueba con contraseñas hasheadas y dejó la API lista para AWS Lambda con `serverless-http`.
