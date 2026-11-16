@@ -3,6 +3,7 @@ const usuarios = require("../repositories/usuario.repository");
 const { firmarToken } = require("../security/jwt");
 const { errorHttp } = require("../utils/errores");
 const config = require("../config/env");
+const { validarRegistro } = require("../utils/validaciones");
 
 const HASH_FALSO = bcrypt.hashSync("no-existe", 10);
 
@@ -36,4 +37,57 @@ async function iniciarSesion(cuerpo = {}) {
   };
 }
 
-module.exports = { iniciarSesion };
+async function registrarUsuario(cuerpo = {}) {
+  if (
+    cuerpo === null ||
+    typeof cuerpo !== "object" ||
+    Array.isArray(cuerpo)
+  ) {
+    throw errorHttp(400, "Los datos de registro deben ser un objeto");
+  }
+
+  const limpiarTexto = (valor) =>
+    typeof valor === "string" ? valor.trim() : valor;
+
+  const datos = {
+    rut: limpiarTexto(cuerpo.rut),
+    nombre: limpiarTexto(cuerpo.nombre),
+    apellido: limpiarTexto(cuerpo.apellido),
+    fechaNacimiento: limpiarTexto(cuerpo.fechaNacimiento),
+    correo: limpiarTexto(cuerpo.correo),
+    contrasena: cuerpo.contrasena,
+    region: limpiarTexto(cuerpo.region),
+    comuna: limpiarTexto(cuerpo.comuna),
+    direccion: limpiarTexto(cuerpo.direccion),
+  };
+
+  if (typeof datos.rut === "string")
+    datos.rut = datos.rut.toUpperCase();
+
+  if (typeof datos.correo === "string")
+    datos.correo = datos.correo.toLowerCase();
+
+  const errores = validarRegistro(datos);
+
+  if (Object.keys(errores).length > 0)
+    throw errorHttp(400, "Revisa los datos del registro", errores);
+
+  const contrasenaHash = await bcrypt.hash(datos.contrasena, 10);
+
+  try {
+    const usuario = await usuarios.crear(datos, contrasenaHash);
+
+    return {
+      mensaje: "Usuario registrado correctamente",
+      usuario,
+    };
+  } catch (error) {
+    // PostgreSQL: violación de una restricción UNIQUE.
+    if (error.code === "23505")
+      throw errorHttp(409, "El correo o RUN ya está registrado");
+
+    throw error;
+  }
+}
+
+module.exports = { iniciarSesion, registrarUsuario };
