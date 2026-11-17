@@ -84,26 +84,6 @@ Para detener el servidor, presione:
  
 Los roles disponibles son **Administrador**, **Vendedor**, **Cajero** y **Cliente**.
 
-### Probar el registro de usuarios
-
-Con la API en ejecución, abre otra terminal en el mismo equipo y envía los datos del usuario en formato JSON. El registro es público: no requiere un token JWT. El servidor asigna el rol `Cliente` automáticamente.
-
-```bash
-curl -i http://localhost:3000/api/v1/auth/registro \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "rut": "123456785",
-    "nombre": "Cliente",
-    "apellido": "Prueba",
-    "correo": "registro.sonidovivo.prueba@gmail.com",
-    "contrasena": "Prueba123",
-    "region": "Metropolitana",
-    "comuna": "Santiago",
-    "direccion": "Calle de prueba 123"
-  }'
-```
-
-Si el RUN y el correo están disponibles, la API responde `201 Created` y devuelve el usuario con su ID y el rol `Cliente`. Si repites el registro con el mismo RUN o correo, responde `409 Conflict`. Para probar la cuenta creada, usa su correo y contraseña en `POST /api/v1/auth/login`.
  
 ## Bitácora
  
