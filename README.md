@@ -12,6 +12,7 @@
  
 <p align="center">API REST del proyecto semestral para Desarrollo Fullstack II</p>
 <hr>
+
 # Equipo Vio Coders
  
 ## Descripción
