@@ -37,12 +37,8 @@ async function iniciarSesion(cuerpo = {}) {
   };
 }
 
-async function registrarUsuario(cuerpo = {}) {
-  if (
-    cuerpo === null ||
-    typeof cuerpo !== "object" ||
-    Array.isArray(cuerpo)
-  ) {
+async function registrarUsuario(cuerpo = {}, rol = "Cliente") {
+  if (cuerpo === null || typeof cuerpo !== "object" || Array.isArray(cuerpo)) {
     throw errorHttp(400, "Los datos de registro deben ser un objeto");
   }
 
@@ -61,8 +57,7 @@ async function registrarUsuario(cuerpo = {}) {
     direccion: limpiarTexto(cuerpo.direccion),
   };
 
-  if (typeof datos.rut === "string")
-    datos.rut = datos.rut.toUpperCase();
+  if (typeof datos.rut === "string") datos.rut = datos.rut.toUpperCase();
 
   if (typeof datos.correo === "string")
     datos.correo = datos.correo.toLowerCase();
@@ -75,14 +70,13 @@ async function registrarUsuario(cuerpo = {}) {
   const contrasenaHash = await bcrypt.hash(datos.contrasena, 10);
 
   try {
-    const usuario = await usuarios.crear(datos, contrasenaHash);
+    const usuario = await usuarios.crear(datos, contrasenaHash, rol);
 
     return {
       mensaje: "Usuario registrado correctamente",
       usuario,
     };
   } catch (error) {
-    // PostgreSQL: violación de una restricción UNIQUE.
     if (error.code === "23505")
       throw errorHttp(409, "El correo o RUN ya está registrado");
 
