@@ -3,7 +3,7 @@ const authService = require("./auth.service");
 const { validarRegistro } = require("../utils/validaciones");
 const { errorHttp } = require("../utils/errores");
 
-const ROLES = ["Administrador", "Vendedor", "Cajero", "Cliente"];
+const ROLES = ["Administrador", "Vendedor", "Cliente"];
 
 const limpiar = (valor) => (typeof valor === "string" ? valor.trim() : valor);
 // El id llega como texto en la URL; solo se aceptan enteros positivos.
