@@ -5,9 +5,9 @@ const { autenticar, autorizar } = require("../middlewares/autenticacion");
 router.use(autenticar, autorizar("Administrador"));
 
 router.get("/", usuarioController.listar);
-router.get("/:rut", usuarioController.obtener);
+router.get("/:id", usuarioController.obtener);
 router.post("/", usuarioController.crear);
-router.put("/:rut", usuarioController.actualizar);
-router.delete("/:rut", usuarioController.eliminar);
+router.put("/:id", usuarioController.actualizar);
+router.delete("/:id", usuarioController.eliminar);
 
 module.exports = router;

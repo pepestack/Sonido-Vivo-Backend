@@ -6,14 +6,20 @@ const { errorHttp } = require("../utils/errores");
 const ROLES = ["Administrador", "Vendedor", "Cajero", "Cliente"];
 
 const limpiar = (valor) => (typeof valor === "string" ? valor.trim() : valor);
-const normalizarRut = (rut) => String(rut).trim().toUpperCase();
+// El id llega como texto en la URL; solo se aceptan enteros positivos.
+function parsearId(valor) {
+  const id = Number(valor);
+  if (!/^\d+$/.test(String(valor)) || !Number.isSafeInteger(id) || id <= 0)
+    throw errorHttp(400, "Id inválido");
+  return id;
+}
 
 async function listar() {
   return usuarios.listar();
 }
 
-async function obtener(rut) {
-  const usuario = await usuarios.buscarPorRut(normalizarRut(rut));
+async function obtener(id) {
+  const usuario = await usuarios.buscarPorId(parsearId(id));
   if (!usuario) throw errorHttp(404, "Usuario no encontrado");
   return usuario;
 }
@@ -24,7 +30,8 @@ async function crear(cuerpo = {}) {
   return authService.registrarUsuario(cuerpo, cuerpo.rol);
 }
 
-async function actualizar(rut, cuerpo = {}) {
+async function actualizar(id, cuerpo = {}) {
+  const idUsuario = parsearId(id);
   const datos = {
     nombre: limpiar(cuerpo.nombre),
     apellido: limpiar(cuerpo.apellido),
@@ -40,7 +47,7 @@ async function actualizar(rut, cuerpo = {}) {
   };
 
   const errores = validarRegistro(datos);
-  delete errores.rut; // el RUT viene en la URL y no se modifica
+  delete errores.rut; // el RUN no se modifica
   delete errores.contrasena; // la contraseña no se cambia aquí
   if (!ROLES.includes(datos.rol)) errores.rol = "Rol inválido";
 
@@ -48,7 +55,7 @@ async function actualizar(rut, cuerpo = {}) {
     throw errorHttp(400, "Revisa los datos", errores);
 
   try {
-    const usuario = await usuarios.actualizar(normalizarRut(rut), datos);
+    const usuario = await usuarios.actualizar(idUsuario, datos);
     if (!usuario) throw errorHttp(404, "Usuario no encontrado");
     return usuario;
   } catch (error) {
@@ -58,8 +65,8 @@ async function actualizar(rut, cuerpo = {}) {
   }
 }
 
-async function eliminar(rut) {
-  const desactivado = await usuarios.desactivar(normalizarRut(rut));
+async function eliminar(id) {
+  const desactivado = await usuarios.desactivar(parsearId(id));
   if (!desactivado) throw errorHttp(404, "Usuario no encontrado");
 }
 

@@ -54,7 +54,7 @@ async function main() {
       [u.rut, u.nombre, u.apellido, u.correo, hash, u.comuna, u.rol],
     );
   }
-  console.log("Uontraseña:1234)");
+  console.log("Contraseña:1234");
   await pool.end();
 }
 

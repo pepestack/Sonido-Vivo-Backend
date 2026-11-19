@@ -1,0 +1,23 @@
+# docker-compose.yml — local database for development
+services:
+  db:
+    image: postgres:16
+    container_name: sonido-vivo-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: sonido_vivo
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      - ./src/db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d sonido_vivo"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  db-data:
