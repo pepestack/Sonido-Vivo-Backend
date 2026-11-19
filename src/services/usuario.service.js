@@ -30,7 +30,7 @@ async function crear(cuerpo = {}) {
   return authService.registrarUsuario(cuerpo, cuerpo.rol);
 }
 
-async function actualizar(id, cuerpo = {}) {
+async function actualizar(id, cuerpo = {}, solicitante = {}) {
   const idUsuario = parsearId(id);
   const datos = {
     nombre: limpiar(cuerpo.nombre),
@@ -54,6 +54,10 @@ async function actualizar(id, cuerpo = {}) {
   if (Object.keys(errores).length > 0)
     throw errorHttp(400, "Revisa los datos", errores);
 
+  // Evita que el administrador se quite a sí mismo el acceso.
+  if (idUsuario === solicitante.id && datos.rol !== solicitante.rol)
+    throw errorHttp(409, "No puedes cambiar tu propio rol");
+
   try {
     const usuario = await usuarios.actualizar(idUsuario, datos);
     if (!usuario) throw errorHttp(404, "Usuario no encontrado");
@@ -65,8 +69,12 @@ async function actualizar(id, cuerpo = {}) {
   }
 }
 
-async function eliminar(id) {
-  const desactivado = await usuarios.desactivar(parsearId(id));
+async function eliminar(id, solicitante = {}) {
+  const idUsuario = parsearId(id);
+  if (idUsuario === solicitante.id)
+    throw errorHttp(409, "No puedes desactivar tu propia cuenta");
+
+  const desactivado = await usuarios.desactivar(idUsuario);
   if (!desactivado) throw errorHttp(404, "Usuario no encontrado");
 }
 
