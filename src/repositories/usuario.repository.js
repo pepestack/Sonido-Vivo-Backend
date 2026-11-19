@@ -51,23 +51,23 @@ async function listar() {
   return rows;
 }
 
-async function buscarPorRut(rut) {
+async function buscarPorId(id) {
   const { rows } = await pool.query(
-    `SELECT ${CAMPOS} FROM usuarios u JOIN roles r ON r.id = u.rol_id WHERE u.rut = $1`,
-    [rut],
+    `SELECT ${CAMPOS} FROM usuarios u JOIN roles r ON r.id = u.rol_id WHERE u.id = $1`,
+    [id],
   );
   return rows[0] ?? null;
 }
 
-async function actualizar(rut, datos) {
+async function actualizar(id, datos) {
   const { rowCount } = await pool.query(
     `UPDATE usuarios SET
        nombre = $2, apellido = $3, fecha_nacimiento = $4, correo = $5,
        region = $6, comuna = $7, direccion = $8,
        rol_id = (SELECT id FROM roles WHERE nombre = $9)
-     WHERE rut = $1`,
+     WHERE id = $1`,
     [
-      rut,
+      id,
       datos.nombre,
       datos.apellido,
       datos.fechaNacimiento || null,
@@ -78,13 +78,13 @@ async function actualizar(rut, datos) {
       datos.rol,
     ],
   );
-  return rowCount > 0 ? buscarPorRut(rut) : null;
+  return rowCount > 0 ? buscarPorId(id) : null;
 }
 
-async function desactivar(rut) {
+async function desactivar(id) {
   const { rowCount } = await pool.query(
-    `UPDATE usuarios SET activo = FALSE WHERE rut = $1 AND activo`,
-    [rut],
+    `UPDATE usuarios SET activo = FALSE WHERE id = $1 AND activo`,
+    [id],
   );
   return rowCount > 0;
 }
@@ -93,7 +93,7 @@ module.exports = {
   buscarPorCorreo,
   crear,
   listar,
-  buscarPorRut,
+  buscarPorId,
   actualizar,
   desactivar,
 };

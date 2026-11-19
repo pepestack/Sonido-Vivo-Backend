@@ -84,10 +84,10 @@ Para detener el servidor, presione:
 | `POST` | `/api/v1/auth/login` | Público | Inicia sesión y devuelve un token JWT de tipo Bearer |
 | `POST` | `/api/v1/auth/registro` | Público | Registra un nuevo usuario con rol `Cliente` |
 | `GET` | `/api/v1/usuarios` | Administrador | Lista todos los usuarios |
-| `GET` | `/api/v1/usuarios/:rut` | Administrador | Obtiene un usuario por su RUN |
+| `GET` | `/api/v1/usuarios/:id` | Administrador | Obtiene un usuario por su id |
 | `POST` | `/api/v1/usuarios` | Administrador | Crea un usuario con el rol indicado |
-| `PUT` | `/api/v1/usuarios/:rut` | Administrador | Modifica los datos y el rol de un usuario (el RUN no se modifica) |
-| `DELETE` | `/api/v1/usuarios/:rut` | Administrador | Desactiva un usuario (eliminación lógica) |
+| `PUT` | `/api/v1/usuarios/:id` | Administrador | Modifica los datos y el rol de un usuario (el RUN no se modifica) |
+| `DELETE` | `/api/v1/usuarios/:id` | Administrador | Desactiva un usuario (eliminación lógica) |
 
 Las rutas protegidas requieren el encabezado `Authorization: Bearer <token>`. Sin token o con un token inválido o expirado responden `401`; con un rol sin permiso responden `403`.
 
@@ -116,7 +116,7 @@ Las rutas protegidas requieren el encabezado `Authorization: Bearer <token>`. Si
 ### 2026-11-19
 - **Sebastian Navarro (sebi-nvrro)**: Implementó el CRUD de usuarios en `/api/v1/usuarios` (listar, obtener, crear, modificar y eliminar), protegido con el middleware de autenticación y restringido al rol `Administrador`. Los usuarios se identifican por su RUN, la eliminación es lógica (`activo = false`) y se reutilizan las validaciones del registro, respondiendo `400`, `404` o `409` según corresponda. Verificó en Postman todos los casos, incluidos los `401` y `403`.
 
-- **José Calderón**: Agregó el middleware que verifica el JWT (`401`) y controla los roles (`403`), y la variable `CORS_ORIGIN` para configurar los orígenes permitidos.
+- **José Calderón**: Agregó el middleware que verifica el JWT (`401`) y controla los roles (`403`), y la variable `CORS_ORIGIN` para configurar los orígenes permitidos. Cambió las rutas de `/api/v1/usuarios` para identificar al usuario por su `id` en vez del RUN, evitando exponer un dato personal en la URL (logs e historial del navegador); un id no numérico responde `400`.
 
 ### 2026-11-16
 - **Sebastian Apablaza**: Implementó `POST /api/v1/auth/registro` usando las validaciones existentes. El backend guarda el usuario en PostgreSQL con la contraseña protegida con bcrypt y asigna el rol `Cliente`. Verificó en EC2 el registro (`201 Created`) y el inicio de sesión con la cuenta creada (`200 OK`).
