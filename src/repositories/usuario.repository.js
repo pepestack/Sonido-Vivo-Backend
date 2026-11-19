@@ -1,5 +1,8 @@
 const pool = require("../config/db");
 
+const CAMPOS = `u.id, u.rut, u.nombre, u.apellido, u.fecha_nacimiento, u.correo,
+                u.region, u.comuna, u.direccion, u.activo, u.creado_en, r.nombre AS rol`;
+
 async function buscarPorCorreo(correo) {
   const { rows } = await pool.query(
     `SELECT u.id, u.nombre, u.apellido, u.correo,
@@ -13,7 +16,7 @@ async function buscarPorCorreo(correo) {
   return rows[0] ?? null;
 }
 
-async function crear(datos, contrasenaHash) {
+async function crear(datos, contrasenaHash, rol = "Cliente") {
   const { rows } = await pool.query(
     `INSERT INTO usuarios (
        rut, nombre, apellido, fecha_nacimiento, correo,
@@ -21,7 +24,7 @@ async function crear(datos, contrasenaHash) {
      )
      VALUES (
        $1, $2, $3, $4, $5, $6, $7, $8, $9,
-       (SELECT id FROM roles WHERE nombre = 'Cliente')
+       (SELECT id FROM roles WHERE nombre = $10)                
      )
      RETURNING id, nombre, apellido, correo`,
     [
@@ -34,10 +37,63 @@ async function crear(datos, contrasenaHash) {
       datos.region,
       datos.comuna,
       datos.direccion,
+      rol,
     ],
   );
 
-  return { ...rows[0], rol: "Cliente" };
+  return { ...rows[0], rol };
 }
 
-module.exports = { buscarPorCorreo, crear };
+async function listar() {
+  const { rows } = await pool.query(
+    `SELECT ${CAMPOS} FROM usuarios u JOIN roles r ON r.id = u.rol_id ORDER BY u.id`,
+  );
+  return rows;
+}
+
+async function buscarPorRut(rut) {
+  const { rows } = await pool.query(
+    `SELECT ${CAMPOS} FROM usuarios u JOIN roles r ON r.id = u.rol_id WHERE u.rut = $1`,
+    [rut],
+  );
+  return rows[0] ?? null;
+}
+
+async function actualizar(rut, datos) {
+  const { rowCount } = await pool.query(
+    `UPDATE usuarios SET
+       nombre = $2, apellido = $3, fecha_nacimiento = $4, correo = $5,
+       region = $6, comuna = $7, direccion = $8,
+       rol_id = (SELECT id FROM roles WHERE nombre = $9)
+     WHERE rut = $1`,
+    [
+      rut,
+      datos.nombre,
+      datos.apellido,
+      datos.fechaNacimiento || null,
+      datos.correo,
+      datos.region,
+      datos.comuna,
+      datos.direccion,
+      datos.rol,
+    ],
+  );
+  return rowCount > 0 ? buscarPorRut(rut) : null;
+}
+
+async function desactivar(rut) {
+  const { rowCount } = await pool.query(
+    `UPDATE usuarios SET activo = FALSE WHERE rut = $1 AND activo`,
+    [rut],
+  );
+  return rowCount > 0;
+}
+
+module.exports = {
+  buscarPorCorreo,
+  crear,
+  listar,
+  buscarPorRut,
+  actualizar,
+  desactivar,
+};
