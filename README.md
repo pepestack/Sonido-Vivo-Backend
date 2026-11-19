@@ -93,17 +93,23 @@ Las rutas protegidas requieren el encabezado `Authorization: Bearer <token>`. Si
 
 ## Estado del proyecto
 
-| Funcionalidad | Estado |
-|---|---|
-| Tablas `roles` y `usuarios` en PostgreSQL | ✅ Listo |
-| Inicio de sesión con JWT | ✅ Listo |
-| Registro de usuarios | ✅ Listo |
-| Listar, obtener, crear, modificar y eliminar usuarios | ✅ Listo |
-| Control de acceso por token (401) y por rol (403) | ✅ Listo |
-| Despliegue en AWS (RDS + Lambda) | 🟨 En avance |
-| Endpoint `GET /api/v1/auth/me` | ⬜ Pendiente |
-| Documentación con Swagger/OpenAPI | ⬜ Pendiente |
-| Inicio de sesión del frontend conectado a la API | ⬜ Pendiente |
+## Estado del proyecto
+
+| Funcionalidad | Diseñado | Implementado | Probado |
+|---|:---:|:---:|:---:|
+| Tablas `roles` y `usuarios` en PostgreSQL | ✅ | ✅ | ✅ |
+| Inicio de sesión con JWT | ✅ | ✅ | ✅ |
+| Registro de usuarios (rol inicial `Cliente`) | ✅ | ✅ | ✅ |
+| CRUD de usuarios (solo Administrador) | ✅ | ✅ | ✅ |
+| Rutas protegidas: `401` sin token o token inválido, `403` por rol | ✅ | ✅ | ✅ |
+| Un usuario no accede a datos de otro | ✅ | ✅ | ✅ |
+| Despliegue en AWS (RDS + Lambda) | ✅ | 🟨 | 🟨 |
+| Documentación con Swagger/OpenAPI | ⬜ | ⬜ | ⬜ |
+| Inicio de sesión y registro del frontend conectados a la API | ⬜ | ⬜ | ⬜ |
+| CRUD del catálogo (instrumentos, equipos y accesorios) | ⬜ | ⬜ | ⬜ |
+| Pedidos: no puede superar el stock (`409`); el cliente ve solo los suyos | ⬜ | ⬜ | ⬜ |
+
+✅ Hecho · 🟨 En avance · ⬜ Pendiente
 
 ## Bitácora
 
