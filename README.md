@@ -103,8 +103,8 @@ Las rutas protegidas requieren el encabezado `Authorization: Bearer <token>`. Si
 | CRUD de usuarios (solo Administrador) | ✅ | ✅ | ✅ |
 | Rutas protegidas: `401` sin token o token inválido, `403` por rol | ✅ | ✅ | ✅ |
 | Un usuario no accede a datos de otro | ✅ | ✅ | ✅ |
-| Despliegue en AWS (RDS + Lambda) | ✅ | 🟨 | 🟨 |
-| Documentación con Swagger/OpenAPI | ⬜ | ⬜ | ⬜ |
+| Despliegue en AWS (RDS + Lambda) | ✅ | ✅ | ✅ |
+| Documentación con Swagger/OpenAPI | ✅ | ✅ | ✅ |
 | Inicio de sesión y registro del frontend conectados a la API | ⬜ | ⬜ | ⬜ |
 | CRUD del catálogo (instrumentos, equipos y accesorios) | ⬜ | ⬜ | ⬜ |
 | Pedidos: no puede superar el stock (`409`); el cliente ve solo los suyos | ⬜ | ⬜ | ⬜ |
