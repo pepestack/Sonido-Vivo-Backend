@@ -24,7 +24,7 @@ const usuarios = [
     apellido: "Calderon",
     correo: "jose.c@duoc.cl",
     comuna: "Valparaíso",
-    rol: "Cajero",
+    rol: "Vendedor",
   },
   {
     rut: "444444444",

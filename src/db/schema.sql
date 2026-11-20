@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS roles (
 );
 
 INSERT INTO roles (nombre)
-VALUES ('Administrador'), ('Vendedor'), ('Cajero'), ('Cliente')
+VALUES ('Administrador'), ('Vendedor'), ('Cliente')
 ON CONFLICT (nombre) DO NOTHING;
 
 CREATE TABLE IF NOT EXISTS usuarios (
@@ -22,3 +22,11 @@ CREATE TABLE IF NOT EXISTS usuarios (
   activo           BOOLEAN      NOT NULL DEFAULT TRUE,
   creado_en        TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );
+
+-- Migración: el caso Sonido Vivo solo define Administrador, Vendedor y Cliente.
+-- En bases ya creadas, los usuarios con rol Cajero pasan a Vendedor y se elimina el rol.
+UPDATE usuarios
+SET rol_id = (SELECT id FROM roles WHERE nombre = 'Vendedor')
+WHERE rol_id = (SELECT id FROM roles WHERE nombre = 'Cajero');
+
+DELETE FROM roles WHERE nombre = 'Cajero';
