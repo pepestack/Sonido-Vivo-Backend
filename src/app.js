@@ -3,6 +3,8 @@ const cors = require("cors");
 const authRoutes = require('./routes/auth.routes');
 const config = require("./config/env");
 const usuarioRoutes = require("./routes/usuario.routes");
+const swaggerUi = require("swagger-ui-express");
+const openapi = require("./docs/openapi");
 
 const app = express();
 
@@ -10,6 +12,12 @@ app.use(cors({ origin: config.corsOrigen.split(",").map((o) => o.trim()) }));
 app.use(express.json());
 app.use('/api/v1/auth', authRoutes);
 app.use("/api/v1/usuarios", usuarioRoutes);
+app.get("/api-docs.json", (req, res) => res.json(openapi));
+app.use(
+  "/api-docs",
+  swaggerUi.serve,
+  swaggerUi.setup(openapi, { swaggerOptions: { persistAuthorization: true } }),
+);
 app.use((req, res) => res.status(404).json({ error: "Ruta no encontrada" }));
 
 app.use((err, req, res, next) => {

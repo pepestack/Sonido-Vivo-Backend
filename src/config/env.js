@@ -5,6 +5,8 @@ if (!process.env.JWT_SECRET) throw new Error("Falta JWT_SECRET en el .env");
 module.exports = {
   puerto: Number(process.env.PORT) || 3000,
   corsOrigen: process.env.CORS_ORIGIN || "http://localhost:5173",
+  // URL base que usa Swagger para "Try it out" (ej. la URL de API Gateway con su stage).
+  urlApi: process.env.API_URL || "/",
   db: {
     ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
     host: process.env.DB_HOST,
