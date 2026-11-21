@@ -30,3 +30,24 @@ SET rol_id = (SELECT id FROM roles WHERE nombre = 'Vendedor')
 WHERE rol_id = (SELECT id FROM roles WHERE nombre = 'Cajero');
 
 DELETE FROM roles WHERE nombre = 'Cajero';
+
+-- ===== KaijuApp (DSY1105) =====
+-- Usuarios de KaijuApp, separados de los de Sonido Vivo (otros roles y otros datos).
+CREATE TABLE IF NOT EXISTS kaiju_roles (
+  id     SMALLSERIAL PRIMARY KEY,
+  nombre VARCHAR(30) NOT NULL UNIQUE
+);
+
+INSERT INTO kaiju_roles (nombre)
+VALUES ('Administrador'), ('Encargado de inventario'), ('Vendedor')
+ON CONFLICT (nombre) DO NOTHING;
+
+CREATE TABLE IF NOT EXISTS kaiju_usuarios (
+  id              SERIAL PRIMARY KEY,
+  nombre          VARCHAR(100) NOT NULL,
+  correo          VARCHAR(100) NOT NULL UNIQUE,
+  contrasena_hash VARCHAR(100) NOT NULL,
+  rol_id          SMALLINT     NOT NULL REFERENCES kaiju_roles (id),
+  activo          BOOLEAN      NOT NULL DEFAULT TRUE,
+  creado_en       TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);

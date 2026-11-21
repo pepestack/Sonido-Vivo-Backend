@@ -7,23 +7,26 @@ const OPCIONES = {
   audience: "sonido-vivo-web",
 };
 
-function firmarToken(usuario) {
+// Audiencia de los tokens de KaijuApp: un token de Sonido Vivo no sirve en Kaiju y al revés.
+const AUDIENCIA_KAIJU = "kaiju-app";
+
+function firmarToken(usuario, audience = OPCIONES.audience) {
   return jwt.sign({ rol: usuario.rol }, config.jwt.secreto, {
     algorithm: OPCIONES.algorithm,
     subject: String(usuario.id),
     expiresIn: config.jwt.expira,
     issuer: OPCIONES.issuer,
-    audience: OPCIONES.audience,
+    audience,
   });
 }
 
 // Lanza TokenExpiredError o JsonWebTokenError si el token no es válido.
-function verificarToken(token) {
+function verificarToken(token, audience = OPCIONES.audience) {
   return jwt.verify(token, config.jwt.secreto, {
     algorithms: [OPCIONES.algorithm],
     issuer: OPCIONES.issuer,
-    audience: OPCIONES.audience,
+    audience,
   });
 }
 
-module.exports = { firmarToken, verificarToken };
+module.exports = { firmarToken, verificarToken, AUDIENCIA_KAIJU };

@@ -44,6 +44,14 @@ const usuarios = [
   },
 ];
 
+// Mismos ids que DatosDePrueba.usuarios de KaijuApp: el historial del teléfono
+// guarda el id del usuario en cada movimiento.
+const kaijuUsuarios = [
+  { id: 1, nombre: "Alejandro Carrasco", correo: "admin.kaiju@duoc.cl", rol: "Administrador" },
+  { id: 2, nombre: "Esteban Hernandez", correo: "encargado.kaiju@duoc.cl", rol: "Encargado de inventario" },
+  { id: 3, nombre: "Ignacia Diaz", correo: "vendedor.kaiju@duoc.cl", rol: "Vendedor" },
+];
+
 async function main() {
   for (const u of usuarios) {
     const hash = await bcrypt.hash("1234", 10);
@@ -54,6 +62,20 @@ async function main() {
       [u.rut, u.nombre, u.apellido, u.correo, hash, u.comuna, u.rol],
     );
   }
+  for (const u of kaijuUsuarios) {
+    const hash = await bcrypt.hash("1234", 10);
+    await pool.query(
+      `INSERT INTO kaiju_usuarios (id, nombre, correo, contrasena_hash, rol_id)
+       VALUES ($1, $2, $3, $4, (SELECT id FROM kaiju_roles WHERE nombre = $5))
+       ON CONFLICT DO NOTHING`,
+      [u.id, u.nombre, u.correo, hash, u.rol],
+    );
+  }
+  // Los ids se insertaron a mano: se mueve la secuencia para que los nuevos no choquen.
+  await pool.query(
+    `SELECT setval(pg_get_serial_sequence('kaiju_usuarios', 'id'),
+                   (SELECT MAX(id) FROM kaiju_usuarios))`,
+  );
   console.log("Contraseña:1234");
   await pool.end();
 }

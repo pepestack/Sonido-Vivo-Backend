@@ -69,6 +69,12 @@ module.exports = {
   tags: [
     { name: "Autenticación", description: "Inicio de sesión y registro" },
     { name: "Usuarios", description: "CRUD de usuarios (solo Administrador)" },
+    {
+      name: "KaijuApp",
+      description:
+        "Usuarios de KaijuApp (DSY1105). Usa un token de `POST /api/v1/kaiju/auth/login`: " +
+        "los tokens de Sonido Vivo no sirven aquí y los de Kaiju no sirven en Sonido Vivo.",
+    },
   ],
   paths: {
     "/api/v1/auth/login": {
@@ -175,6 +181,118 @@ module.exports = {
         description:
           "Marca al usuario como inactivo; pierde el acceso de inmediato. " +
           "Un administrador no puede desactivar su propia cuenta (409).",
+        security: [{ bearerAuth: [] }],
+        responses: {
+          204: { description: "Usuario desactivado" },
+          400: error("Id inválido", { error: "Id inválido" }),
+          401: respuestas[401],
+          403: respuestas[403],
+          404: respuestas[404],
+          409: error("Intento de desactivar la propia cuenta", {
+            error: "No puedes desactivar tu propia cuenta",
+          }),
+        },
+      },
+    },
+    "/api/v1/kaiju/auth/login": {
+      post: {
+        tags: ["KaijuApp"],
+        summary: "Inicia sesión en KaijuApp y devuelve un JWT de Kaiju",
+        description: "Los errores vienen por campo en `detalles` (correo o contrasena).",
+        requestBody: json(ref("LoginRequest"), {
+          correo: "admin.kaiju@duoc.cl",
+          contrasena: "1234",
+        }),
+        responses: {
+          200: ok("Sesión iniciada", ref("KaijuLoginResponse")),
+          400: error("Correo mal formado o contraseña vacía", {
+            error: "Revisa los datos",
+            detalles: { correo: "Ingresa un correo válido" },
+          }),
+          401: error("Usuario inexistente o inactivo, o contraseña incorrecta", {
+            error: "Usuario no encontrado",
+            detalles: { correo: "No existe un usuario con este correo" },
+          }),
+        },
+      },
+    },
+    "/api/v1/kaiju/usuarios": {
+      get: {
+        tags: ["KaijuApp"],
+        summary: "Lista los usuarios activos de KaijuApp",
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: ok("Listado de usuarios", { type: "array", items: ref("KaijuUsuario") }),
+          401: respuestas[401],
+          403: respuestas[403],
+        },
+      },
+      post: {
+        tags: ["KaijuApp"],
+        summary: "Crea un usuario de KaijuApp",
+        security: [{ bearerAuth: [] }],
+        requestBody: json(ref("KaijuUsuarioCrear"), {
+          nombre: "Vendedor Nuevo",
+          correo: "nuevo.kaiju@duoc.cl",
+          contrasena: "1234",
+          rol: "Vendedor",
+        }),
+        responses: {
+          201: ok("Usuario creado", ref("KaijuUsuario")),
+          400: error("Datos inválidos", {
+            error: "Revisa los datos",
+            detalles: { rol: "Rol inválido" },
+          }),
+          401: respuestas[401],
+          403: respuestas[403],
+          409: error("Correo repetido", {
+            error: "El correo ya está registrado",
+            detalles: { correo: "El correo ya está registrado" },
+          }),
+        },
+      },
+    },
+    "/api/v1/kaiju/usuarios/{id}": {
+      parameters: [parametroId],
+      get: {
+        tags: ["KaijuApp"],
+        summary: "Obtiene un usuario de KaijuApp por su id",
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: ok("Usuario encontrado", ref("KaijuUsuario")),
+          400: error("Id inválido", { error: "Id inválido" }),
+          401: respuestas[401],
+          403: respuestas[403],
+          404: respuestas[404],
+        },
+      },
+      put: {
+        tags: ["KaijuApp"],
+        summary: "Modifica un usuario de KaijuApp",
+        description:
+          "La contraseña es opcional: si viene se cambia, si no viene se mantiene. " +
+          "Un administrador no puede cambiar su propio rol (409).",
+        security: [{ bearerAuth: [] }],
+        requestBody: json(ref("KaijuUsuarioActualizar"), {
+          nombre: "Ignacia Diaz",
+          correo: "vendedor.kaiju@duoc.cl",
+          rol: "Encargado de inventario",
+        }),
+        responses: {
+          200: ok("Usuario actualizado", ref("KaijuUsuario")),
+          400: respuestas[400],
+          401: respuestas[401],
+          403: respuestas[403],
+          404: respuestas[404],
+          409: error("Correo repetido o intento de cambiar el propio rol", {
+            error: "No puedes cambiar tu propio rol",
+          }),
+        },
+      },
+      delete: {
+        tags: ["KaijuApp"],
+        summary: "Desactiva un usuario de KaijuApp (eliminación lógica)",
+        description: "Un administrador no puede desactivar su propia cuenta (409).",
         security: [{ bearerAuth: [] }],
         responses: {
           204: { description: "Usuario desactivado" },
@@ -302,6 +420,56 @@ module.exports = {
           activo: { type: "boolean" },
           creado_en: { type: "string", format: "date-time" },
           rol: ref("Rol"),
+        },
+      },
+      KaijuRol: {
+        type: "string",
+        enum: ["Administrador", "Encargado de inventario", "Vendedor"],
+      },
+      KaijuUsuario: {
+        type: "object",
+        properties: {
+          id: { type: "integer" },
+          nombre: { type: "string" },
+          correo: { type: "string" },
+          rol: ref("KaijuRol"),
+          activo: { type: "boolean" },
+          creado_en: { type: "string", format: "date-time" },
+        },
+      },
+      KaijuUsuarioActualizar: {
+        type: "object",
+        required: ["nombre", "correo", "rol"],
+        properties: {
+          nombre: { type: "string", maxLength: 100 },
+          correo: { type: "string", format: "email", maxLength: 100 },
+          contrasena: {
+            type: "string",
+            minLength: 4,
+            maxLength: 10,
+            description: "Opcional en PUT; si no viene, no se cambia",
+          },
+          rol: ref("KaijuRol"),
+        },
+      },
+      KaijuUsuarioCrear: {
+        allOf: [ref("KaijuUsuarioActualizar"), { type: "object", required: ["contrasena"] }],
+      },
+      KaijuLoginResponse: {
+        type: "object",
+        properties: {
+          accessToken: { type: "string" },
+          tokenType: { type: "string", example: "Bearer" },
+          expiresIn: { type: "string", example: "1h" },
+          usuario: {
+            type: "object",
+            properties: {
+              id: { type: "integer" },
+              nombre: { type: "string" },
+              correo: { type: "string" },
+              rol: ref("KaijuRol"),
+            },
+          },
         },
       },
     },

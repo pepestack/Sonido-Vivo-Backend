@@ -1,18 +1,11 @@
 const usuarios = require("../repositories/usuario.repository");
 const authService = require("./auth.service");
-const { validarRegistro } = require("../utils/validaciones");
+const { validarRegistro, parsearId } = require("../utils/validaciones");
 const { errorHttp } = require("../utils/errores");
 
 const ROLES = ["Administrador", "Vendedor", "Cliente"];
 
 const limpiar = (valor) => (typeof valor === "string" ? valor.trim() : valor);
-// El id llega como texto en la URL; solo se aceptan enteros positivos.
-function parsearId(valor) {
-  const id = Number(valor);
-  if (!/^\d+$/.test(String(valor)) || !Number.isSafeInteger(id) || id <= 0)
-    throw errorHttp(400, "Id inválido");
-  return id;
-}
 
 async function listar() {
   return usuarios.listar();
