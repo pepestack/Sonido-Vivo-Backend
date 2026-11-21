@@ -1,3 +1,5 @@
+const { errorHttp } = require("./errores");
+
 const correosPermitidos = ["duoc.cl", "profesor.duoc.cl", "gmail.com"];
 
 function rutValido(rut) {
@@ -90,4 +92,12 @@ function validarRegistro(d = {}) {
   return errores;
 }
 
-module.exports = { validarRegistro };
+// El id llega como texto en la URL; solo se aceptan enteros positivos.
+function parsearId(valor) {
+  const id = Number(valor);
+  if (!/^\d+$/.test(String(valor)) || !Number.isSafeInteger(id) || id <= 0)
+    throw errorHttp(400, "Id inválido");
+  return id;
+}
+
+module.exports = { validarRegistro, parsearId };
