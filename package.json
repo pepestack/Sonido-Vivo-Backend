@@ -7,7 +7,9 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "db:seed": "node scripts/semilla.js"
+    "db:seed": "node scripts/semilla.js",
+    "lambda:zip": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/empaquetar-lambda.ps1",
+    "lambda:subir": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/empaquetar-lambda.ps1 -Subir"
   },
   "repository": {
     "type": "git",
