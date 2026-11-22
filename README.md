@@ -28,6 +28,7 @@
 - [Ejecución](#ejecución)
 - [Endpoints](#endpoints)
 - [Bitácora](#bitácora)
+- [KaijuApp](#kaijuapp-dsy1105)
 ## Estructura del proyecto
  
 El sistema sigue una **arquitectura en capas** (rutas → controladores → servicios → repositorios), que separa la capa HTTP, la lógica de negocio y el acceso a datos para facilitar el mantenimiento y escalamiento del proyecto.
@@ -110,6 +111,46 @@ Las rutas protegidas requieren el encabezado `Authorization: Bearer <token>`. Si
 | Pedidos: no puede superar el stock (`409`); el cliente ve solo los suyos | ⬜ | ⬜ | ⬜ |
 
 ✅ Hecho · 🟨 En avance · ⬜ Pendiente
+
+
+## KaijuApp (DSY1105)
+Por temas de simplicidad, se integró una API independiente (en estricto rigor, otro grupo de endpoints) para la aplicación móvil [KaijuApp](https://github.com/pepestack/KaijuApp), con su propia tabla, roles y tokens JWT, éstos últimos no son intercambiables con los tokens de Sonido Vivo.
+
+La API cuenta con login y CRUD de usuarios en `/api/v1/kaiju`:
+- `POST /api/v1/kaiju/auth/login` (público; errores por campo en `detalles`)
+- `GET|POST /api/v1/kaiju/usuarios`, `GET|PUT|DELETE /api/v1/kaiju/usuarios/:id` (requieren JWT y rol Administrador; DELETE es lógico, o sea que desactiva el usuario y no lo elimina de la base de datos)
+
+| Correo | Rol | Contraseña |
+|---|---|---|
+| admin.kaiju@duoc.cl | Administrador | 1234 |
+| encargado.kaiju@duoc.cl | Encargado de inventario | 1234 |
+| vendedor.kaiju@duoc.cl | Vendedor | 1234 |
+
+## Documentación (Swagger)
+
+La API está documentada con OpenAPI 3 y se puede probar desde el navegador con Swagger UI.
+
+| Recurso | Local | Desplegado |
+|---|---|---|
+| Swagger UI | http://localhost:3000/api-docs | `<URL de Lambda/EC2>/api-docs` |
+| Especificación JSON | http://localhost:3000/api-docs.json | `<URL de Lambda/EC2>/api-docs.json` |
+
+La documentación se divide en tres secciones:
+
+- **Autenticación**: login y registro de Sonido Vivo.
+- **Usuarios**: CRUD de usuarios de Sonido Vivo (solo Administrador).
+- **KaijuApp**: login y CRUD de usuarios de KaijuApp (solo para Administrador de Kaiju).
+
+### Probar rutas protegidas
+
+1. Ejecuta el login que corresponda con **Try it out**:
+   - Sonido Vivo: `POST /api/v1/auth/login` (ej. `admin@duoc.cl` / `1234`).
+   - KaijuApp: `POST /api/v1/kaiju/auth/login` (ej. `admin.kaiju@duoc.cl` / `1234`).
+2. Copia el `accessToken` de la respuesta.
+3. Presiona **Authorize** al inicio de la página, pega el token (sin escribir `Bearer`) y confirma.
+4. Las rutas con candado ya se pueden ejecutar. El token queda guardado aunque se recargue la página.
+
+Recordar que los tokens no son intercambiables entre Sonido Vivo y KaijuApp. Para cambiar de app, vuelve a **Authorize**, cierra la sesión (**Logout**) y pega el otro token.
 
 ## Bitácora
 
