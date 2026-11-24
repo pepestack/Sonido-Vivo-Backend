@@ -9,7 +9,9 @@
     "dev": "node --watch server.js",
     "db:seed": "node scripts/semilla.js",
     "lambda:zip": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/empaquetar-lambda.ps1",
-    "lambda:subir": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/empaquetar-lambda.ps1 -Subir"
+    "lambda:subir": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/empaquetar-lambda.ps1 -Subir",
+    "lambda:zip:linux": "bash scripts/empaquetar-lambda.sh",
+    "lambda:subir:linux": "bash scripts/empaquetar-lambda.sh --subir"
   },
   "repository": {
     "type": "git",

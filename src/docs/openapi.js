@@ -56,6 +56,35 @@ const ejemploUsuario = {
   direccion: "Av. Borgoño 123",
 };
 
+const parametroIdProducto = {
+  ...parametroId,
+  description: "Id numérico del producto",
+};
+
+const ejemploProducto = {
+  codigo: "MI005",
+  nombre: "Micrófono Inalámbrico de Mano",
+  marca: "Shure",
+  modelo: "BLX24/SM58",
+  descripcion: "Sistema inalámbrico con cápsula SM58.",
+  categoria: "Micrófonos",
+  precio: 399990,
+  stock: 4,
+  imagen: null,
+};
+
+const errorProducto400 = error("Datos inválidos o categoría inexistente", {
+  error: "Revisa los datos del producto",
+  detalles: { precio: "El precio debe ser un entero entre 0 y 100000000" },
+});
+const errorProducto404 = error("Producto no encontrado o desactivado", {
+  error: "Producto no encontrado",
+});
+const errorProducto409 = error("Código repetido", {
+  error: "Ya existe un producto con ese código",
+  detalles: { codigo: "Código repetido" },
+});
+
 module.exports = {
   openapi: "3.0.3",
   info: {
@@ -69,6 +98,12 @@ module.exports = {
   tags: [
     { name: "Autenticación", description: "Inicio de sesión y registro" },
     { name: "Usuarios", description: "CRUD de usuarios (solo Administrador)" },
+    {
+      name: "Productos",
+      description:
+        "Catálogo de instrumentos, equipos y accesorios. Leer es público; " +
+        "Administrador y Vendedor crean y editan; solo el Administrador elimina.",
+    },
     {
       name: "KaijuApp",
       description:
@@ -194,6 +229,69 @@ module.exports = {
         },
       },
     },
+    "/api/v1/productos": {
+      get: {
+        tags: ["Productos"],
+        summary: "Lista los productos activos del catálogo",
+        responses: {
+          200: ok("Listado de productos", { type: "array", items: ref("Producto") }),
+        },
+      },
+      post: {
+        tags: ["Productos"],
+        summary: "Agrega un producto al catálogo",
+        security: [{ bearerAuth: [] }],
+        requestBody: json(ref("ProductoEntrada"), ejemploProducto),
+        responses: {
+          201: ok("Producto creado", ref("Producto")),
+          400: errorProducto400,
+          401: respuestas[401],
+          403: respuestas[403],
+          409: errorProducto409,
+        },
+      },
+    },
+    "/api/v1/productos/{id}": {
+      parameters: [parametroIdProducto],
+      get: {
+        tags: ["Productos"],
+        summary: "Obtiene un producto por su id",
+        responses: {
+          200: ok("Producto encontrado", ref("Producto")),
+          400: error("Id inválido", { error: "Id inválido" }),
+          404: errorProducto404,
+        },
+      },
+      put: {
+        tags: ["Productos"],
+        summary: "Modifica un producto (se envían todos los campos)",
+        security: [{ bearerAuth: [] }],
+        requestBody: json(ref("ProductoEntrada"), { ...ejemploProducto, stock: 6 }),
+        responses: {
+          200: ok("Producto actualizado", ref("Producto")),
+          400: errorProducto400,
+          401: respuestas[401],
+          403: respuestas[403],
+          404: errorProducto404,
+          409: errorProducto409,
+        },
+      },
+      delete: {
+        tags: ["Productos"],
+        summary: "Saca un producto del catálogo (eliminación lógica)",
+        description:
+          "Marca el producto como inactivo. No se borra la fila porque los pedidos " +
+          "antiguos siguen apuntando a él. Solo Administrador.",
+        security: [{ bearerAuth: [] }],
+        responses: {
+          204: { description: "Producto desactivado" },
+          400: error("Id inválido", { error: "Id inválido" }),
+          401: respuestas[401],
+          403: respuestas[403],
+          404: errorProducto404,
+        },
+      },
+    },
     "/api/v1/kaiju/auth/login": {
       post: {
         tags: ["KaijuApp"],
@@ -313,6 +411,43 @@ module.exports = {
     },
     schemas: {
       Rol: { type: "string", enum: ["Administrador", "Vendedor", "Cliente"] },
+      ProductoEntrada: {
+        type: "object",
+        required: ["codigo", "nombre", "marca", "modelo", "categoria", "precio", "stock"],
+        properties: {
+          codigo: {
+            type: "string",
+            pattern: "^[A-Z0-9-]{2,10}$",
+            description: "Código del catálogo, único (se guarda en mayúsculas)",
+          },
+          nombre: { type: "string", maxLength: 100 },
+          marca: { type: "string", maxLength: 50 },
+          modelo: { type: "string", maxLength: 50 },
+          descripcion: { type: "string", maxLength: 500, nullable: true },
+          categoria: {
+            type: "string",
+            description: "Nombre de una categoría existente, por ejemplo Micrófonos",
+          },
+          precio: { type: "integer", minimum: 0, maximum: 100000000, description: "Pesos chilenos" },
+          stock: { type: "integer", minimum: 0, maximum: 1000000 },
+          imagen: { type: "string", maxLength: 500, nullable: true, description: "Ruta o URL" },
+        },
+      },
+      Producto: {
+        type: "object",
+        properties: {
+          id: { type: "integer" },
+          codigo: { type: "string" },
+          nombre: { type: "string" },
+          marca: { type: "string" },
+          modelo: { type: "string" },
+          descripcion: { type: "string", nullable: true },
+          categoria: { type: "string" },
+          precio: { type: "integer" },
+          stock: { type: "integer" },
+          imagen: { type: "string", nullable: true },
+        },
+      },
       Error: {
         type: "object",
         properties: {

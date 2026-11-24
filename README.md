@@ -89,6 +89,11 @@ Para detener el servidor, presione:
 | `POST` | `/api/v1/usuarios` | Administrador | Crea un usuario con el rol indicado |
 | `PUT` | `/api/v1/usuarios/:id` | Administrador | Modifica los datos y el rol de un usuario (el RUN no se modifica) |
 | `DELETE` | `/api/v1/usuarios/:id` | Administrador | Desactiva un usuario (eliminación lógica) |
+| `GET` | `/api/v1/productos` | Público | Lista los productos activos del catálogo |
+| `GET` | `/api/v1/productos/:id` | Público | Obtiene un producto por su id |
+| `POST` | `/api/v1/productos` | Administrador, Vendedor | Agrega un producto al catálogo |
+| `PUT` | `/api/v1/productos/:id` | Administrador, Vendedor | Modifica un producto (incluido su stock) |
+| `DELETE` | `/api/v1/productos/:id` | Administrador | Saca un producto del catálogo (eliminación lógica) |
 
 Las rutas protegidas requieren el encabezado `Authorization: Bearer <token>`. Sin token o con un token inválido o expirado responden `401`; con un rol sin permiso responden `403`.
 
@@ -107,7 +112,7 @@ Las rutas protegidas requieren el encabezado `Authorization: Bearer <token>`. Si
 | Despliegue en AWS (RDS + Lambda) | ✅ | ✅ | ✅ |
 | Documentación con Swagger/OpenAPI | ✅ | ✅ | ✅ |
 | Inicio de sesión y registro del frontend conectados a la API | ⬜ | ⬜ | ⬜ |
-| CRUD del catálogo (instrumentos, equipos y accesorios) | ⬜ | ⬜ | ⬜ |
+| CRUD del catálogo (instrumentos, equipos y accesorios) | ✅ | ✅ | ✅ |
 | Pedidos: no puede superar el stock (`409`); el cliente ve solo los suyos | ⬜ | ⬜ | ⬜ |
 
 ✅ Hecho · 🟨 En avance · ⬜ Pendiente
