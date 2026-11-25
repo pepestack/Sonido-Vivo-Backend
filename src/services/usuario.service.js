@@ -37,12 +37,15 @@ async function actualizar(id, cuerpo = {}, solicitante = {}) {
     comuna: limpiar(cuerpo.comuna),
     direccion: limpiar(cuerpo.direccion),
     rol: cuerpo.rol,
+    activo: cuerpo.activo, // opcional: true reactiva, false desactiva
   };
 
   const errores = validarRegistro(datos);
   delete errores.rut; // el RUN no se modifica
   delete errores.contrasena; // la contraseña no se cambia aquí
   if (!ROLES.includes(datos.rol)) errores.rol = "Rol inválido";
+  if (datos.activo !== undefined && typeof datos.activo !== "boolean")
+    errores.activo = "activo debe ser true o false";
 
   if (Object.keys(errores).length > 0)
     throw errorHttp(400, "Revisa los datos", errores);
@@ -50,6 +53,8 @@ async function actualizar(id, cuerpo = {}, solicitante = {}) {
   // Evita que el administrador se quite a sí mismo el acceso.
   if (idUsuario === solicitante.id && datos.rol !== solicitante.rol)
     throw errorHttp(409, "No puedes cambiar tu propio rol");
+  if (idUsuario === solicitante.id && datos.activo === false)
+    throw errorHttp(409, "No puedes desactivar tu propia cuenta");
 
   try {
     const usuario = await usuarios.actualizar(idUsuario, datos);

@@ -42,15 +42,26 @@ async function existeCategoria(nombre) {
   return rowCount > 0;
 }
 
+// Si el código pertenece a un producto desactivado, lo reactiva con los datos nuevos
+// (conserva el id, al que apuntan los pedidos antiguos). Si está activo, no hace nada
+// y se lanza el mismo error de código repetido que daría el INSERT.
 async function crear(d) {
   const { rows } = await pool.query(
     `INSERT INTO productos
        (codigo, nombre, marca, modelo, descripcion, categoria_id, precio, stock, imagen, precio_promocional)
      VALUES ($1, $2, $3, $4, $5, (SELECT id FROM categorias WHERE nombre = $6), $7, $8, $9, $10)
+     ON CONFLICT (codigo) DO UPDATE SET
+       nombre = EXCLUDED.nombre, marca = EXCLUDED.marca, modelo = EXCLUDED.modelo,
+       descripcion = EXCLUDED.descripcion, categoria_id = EXCLUDED.categoria_id,
+       precio = EXCLUDED.precio, stock = EXCLUDED.stock, imagen = EXCLUDED.imagen,
+       precio_promocional = EXCLUDED.precio_promocional,
+       activo = TRUE, actualizado_en = NOW()
+     WHERE NOT productos.activo
      RETURNING id`,
     [d.codigo, d.nombre, d.marca, d.modelo, d.descripcion, d.categoria, d.precio, d.stock, d.imagen,
       d.precioPromocional],
   );
+  if (rows.length === 0) throw Object.assign(new Error("Código repetido"), { code: "23505" });
   return buscarPorId(rows[0].id);
 }
 

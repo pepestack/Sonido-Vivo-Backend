@@ -27,13 +27,21 @@ async function buscarPorId(id) {
   return rows[0] ?? null;
 }
 
+// Si el correo pertenece a un usuario desactivado, lo reactiva con los datos nuevos
+// (conserva el id, que el historial del teléfono guarda). El listado oculta a los
+// inactivos, así que esta es la forma de recuperarlos. Si está activo: correo repetido.
 async function crear(datos, contrasenaHash) {
   const { rows } = await pool.query(
     `INSERT INTO kaiju_usuarios (nombre, correo, contrasena_hash, rol_id)
      VALUES ($1, $2, $3, (SELECT id FROM kaiju_roles WHERE nombre = $4))
+     ON CONFLICT (correo) DO UPDATE SET
+       nombre = EXCLUDED.nombre, contrasena_hash = EXCLUDED.contrasena_hash,
+       rol_id = EXCLUDED.rol_id, activo = TRUE
+     WHERE NOT kaiju_usuarios.activo
      RETURNING id`,
     [datos.nombre, datos.correo, contrasenaHash, datos.rol],
   );
+  if (rows.length === 0) throw Object.assign(new Error("Correo repetido"), { code: "23505" });
   return buscarPorId(rows[0].id);
 }
 

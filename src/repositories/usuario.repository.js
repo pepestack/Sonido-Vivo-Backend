@@ -64,7 +64,8 @@ async function actualizar(id, datos) {
     `UPDATE usuarios SET
        nombre = $2, apellido = $3, fecha_nacimiento = $4, correo = $5,
        region = $6, comuna = $7, direccion = $8,
-       rol_id = (SELECT id FROM roles WHERE nombre = $9)
+       rol_id = (SELECT id FROM roles WHERE nombre = $9),
+       activo = COALESCE($10, activo)
      WHERE id = $1`,
     [
       id,
@@ -76,6 +77,7 @@ async function actualizar(id, datos) {
       datos.comuna,
       datos.direccion,
       datos.rol,
+      datos.activo ?? null, // null = no se modifica
     ],
   );
   return rowCount > 0 ? buscarPorId(id) : null;

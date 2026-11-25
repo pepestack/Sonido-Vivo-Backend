@@ -239,7 +239,9 @@ module.exports = {
         summary: "Modifica los datos y el rol de un usuario",
         description:
           "Se envían todos los campos. El RUN y la contraseña no se modifican. " +
-          "Un administrador no puede cambiar su propio rol (409).",
+          "`activo` es opcional: true reactiva una cuenta desactivada y false la desactiva; " +
+          "si no viene, no cambia. Un administrador no puede cambiar su propio rol ni " +
+          "desactivarse a sí mismo (409).",
         security: [{ bearerAuth: [] }],
         requestBody: json(ref("UsuarioActualizar"), { ...ejemploUsuario, rol: "Cliente" }),
         responses: {
@@ -248,7 +250,7 @@ module.exports = {
           401: respuestas[401],
           403: respuestas[403],
           404: respuestas[404],
-          409: error("Correo duplicado o intento de cambiar el propio rol", {
+          409: error("Correo duplicado, o intento de cambiar el propio rol o desactivarse", {
             error: "No puedes cambiar tu propio rol",
           }),
         },
@@ -283,6 +285,9 @@ module.exports = {
       post: {
         tags: ["Productos"],
         summary: "Agrega un producto al catálogo",
+        description:
+          "Si el código pertenece a un producto desactivado, lo reactiva con estos datos " +
+          "(mismo id). Si pertenece a un producto activo responde 409.",
         security: [{ bearerAuth: [] }],
         requestBody: json(ref("ProductoEntrada"), ejemploProducto),
         responses: {
@@ -484,6 +489,9 @@ module.exports = {
       post: {
         tags: ["KaijuApp"],
         summary: "Crea un usuario de KaijuApp",
+        description:
+          "Si el correo pertenece a un usuario desactivado, lo reactiva con estos datos " +
+          "(mismo id). Si pertenece a un usuario activo responde 409.",
         security: [{ bearerAuth: [] }],
         requestBody: json(ref("KaijuUsuarioCrear"), {
           nombre: "Vendedor Nuevo",
@@ -762,7 +770,17 @@ module.exports = {
       UsuarioActualizar: {
         allOf: [
           ref("DatosUsuario"),
-          { type: "object", required: ["rol"], properties: { rol: ref("Rol") } },
+          {
+            type: "object",
+            required: ["rol"],
+            properties: {
+              rol: ref("Rol"),
+              activo: {
+                type: "boolean",
+                description: "Opcional: true reactiva, false desactiva; si no viene, no cambia",
+              },
+            },
+          },
         ],
       },
       RegistroResponse: {
