@@ -446,10 +446,17 @@ module.exports = {
             error: "Revisa los datos",
             detalles: { correo: "Ingresa un correo válido" },
           }),
-          401: error("Usuario inexistente o inactivo, o contraseña incorrecta", {
-            error: "Usuario no encontrado",
-            detalles: { correo: "No existe un usuario con este correo" },
-          }),
+          401: error(
+            "Usuario inexistente o inactivo, o contraseña incorrecta. La respuesta es " +
+              "idéntica en los tres casos para no revelar qué correos tienen cuenta.",
+            {
+              error: "Correo o contraseña incorrectos",
+              detalles: {
+                correo: "Correo o contraseña incorrectos",
+                contrasena: "Correo o contraseña incorrectos",
+              },
+            },
+          ),
         },
       },
     },

@@ -84,4 +84,4 @@ async function registrarUsuario(cuerpo = {}, rol = "Cliente") {
   }
 }
 
-module.exports = { iniciarSesion, registrarUsuario };
+module.exports = { iniciarSesion, registrarUsuario, HASH_FALSO };

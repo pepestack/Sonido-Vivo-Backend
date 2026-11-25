@@ -4,11 +4,13 @@ const { firmarToken, AUDIENCIA_KAIJU } = require("../security/jwt");
 const { parsearId } = require("../utils/validaciones");
 const { errorHttp } = require("../utils/errores");
 const config = require("../config/env");
+const { HASH_FALSO } = require("./auth.service");
 
 // Deben coincidir con kaiju_roles y con el enum Rol de la app.
 const ROLES = ["Administrador", "Encargado de inventario", "Vendedor"];
 // KaijuApp acepta correos de cualquier dominio (a diferencia de Sonido Vivo).
 const REGEX_CORREO = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const CREDENCIALES_INCORRECTAS = "Correo o contraseña incorrectos";
 
 const limpiar = (valor) => (typeof valor === "string" ? valor.trim() : valor);
 const normalizarCorreo = (valor) =>
@@ -29,15 +31,17 @@ async function iniciarSesion(cuerpo = {}) {
   if (Object.keys(errores).length > 0)
     throw errorHttp(400, "Revisa los datos", errores);
 
+  // Mismo mensaje y mismo tiempo de respuesta (bcrypt siempre se ejecuta) para
+  // que no se pueda averiguar qué correos tienen cuenta.
   const usuario = await kaijuUsuarios.buscarPorCorreo(correo);
-  if (!usuario || !usuario.activo)
-    throw errorHttp(401, "Usuario no encontrado", {
-      correo: "No existe un usuario con este correo",
-    });
-
-  if (!(await bcrypt.compare(contrasena, usuario.contrasena_hash)))
-    throw errorHttp(401, "Contraseña incorrecta", {
-      contrasena: "Contraseña incorrecta",
+  const coincide = await bcrypt.compare(
+    contrasena,
+    usuario ? usuario.contrasena_hash : HASH_FALSO,
+  );
+  if (!usuario || !coincide || !usuario.activo)
+    throw errorHttp(401, CREDENCIALES_INCORRECTAS, {
+      correo: CREDENCIALES_INCORRECTAS,
+      contrasena: CREDENCIALES_INCORRECTAS,
     });
 
   return {
