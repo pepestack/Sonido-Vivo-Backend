@@ -63,6 +63,12 @@ CREATE INDEX IF NOT EXISTS productos_categoria_id_idx ON productos (categoria_id
 ALTER TABLE productos
   ADD COLUMN IF NOT EXISTS precio_promocional INTEGER CHECK (precio_promocional >= 0);
 
+-- Precio que se cobra y se muestra. Lo calcula PostgreSQL en cada INSERT/UPDATE,
+-- así el catálogo y los pedidos usan la misma regla y nadie puede escribirlo a mano.
+ALTER TABLE productos
+  ADD COLUMN IF NOT EXISTS precio_final INTEGER
+  GENERATED ALWAYS AS (LEAST(precio, COALESCE(precio_promocional, precio))) STORED;
+
 -- Pedidos de clientes e invitados. El total se calcula en el servidor.
 CREATE TABLE IF NOT EXISTS pedidos (
   id             SERIAL PRIMARY KEY,

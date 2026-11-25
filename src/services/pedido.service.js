@@ -86,12 +86,7 @@ async function crear(cuerpo, usuarioId = null) {
       const cantidad = cantidades.get(codigo);
       if (!producto?.activo) throw errorHttp(404, "Producto no disponible", { codigo });
       if (producto.stock < cantidad) throw errorHttp(409, "Stock insuficiente", { codigo });
-
-      const promocional = producto.precio_promocional;
-      const precio = promocional !== null && promocional < producto.precio
-        ? promocional
-        : producto.precio;
-      return { id: producto.id, codigo, nombre: producto.nombre, cantidad, precio };
+      return { id: producto.id, codigo, nombre: producto.nombre, cantidad, precio: producto.precio_final };
     });
     const subtotal = items.reduce((suma, item) => suma + item.cantidad * item.precio, 0);
     const despacho = entrega.tipo === "despacho" ? COSTO_DESPACHO : 0;

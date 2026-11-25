@@ -308,15 +308,25 @@ module.exports = {
       put: {
         tags: ["Productos"],
         summary: "Modifica un producto (se envían todos los campos)",
+        description:
+          "Exige `actualizadoEn` tal como vino en el GET. Si otra edición o una venta " +
+          "modificó el producto desde entonces, responde 409 y hay que recargarlo.",
         security: [{ bearerAuth: [] }],
-        requestBody: json(ref("ProductoEntrada"), { ...ejemploProducto, stock: 6 }),
+        requestBody: json(ref("ProductoEntrada"), {
+          ...ejemploProducto,
+          stock: 6,
+          actualizadoEn: "2026-11-25T14:03:12.345Z",
+        }),
         responses: {
           200: ok("Producto actualizado", ref("Producto")),
           400: errorProducto400,
           401: respuestas[401],
           403: respuestas[403],
           404: errorProducto404,
-          409: errorProducto409,
+          409: error("Código repetido o el producto cambió desde que se leyó", {
+            error: "El producto fue modificado por otra operación, recarga e intenta de nuevo",
+            detalles: { actualizadoEn: "Versión desactualizada" },
+          }),
         },
       },
       delete: {
@@ -577,6 +587,19 @@ module.exports = {
           precio: { type: "integer", minimum: 0, maximum: 100000000, description: "Pesos chilenos" },
           stock: { type: "integer", minimum: 0, maximum: 1000000 },
           imagen: { type: "string", maxLength: 500, nullable: true, description: "Ruta o URL" },
+          precioPromocional: {
+            type: "integer",
+            minimum: 0,
+            nullable: true,
+            description: "Precio de oferta en CLP; debe ser menor que precio. null = sin promoción",
+          },
+          actualizadoEn: {
+            type: "string",
+            format: "date-time",
+            description:
+              "Solo en PUT y obligatorio: el actualizadoEn recibido al leer el producto. " +
+              "Si el producto cambió desde entonces (otra edición o una venta) responde 409.",
+          },
         },
       },
       Producto: {
@@ -590,8 +613,18 @@ module.exports = {
           descripcion: { type: "string", nullable: true },
           categoria: { type: "string" },
           precio: { type: "integer" },
+          precioPromocional: { type: "integer", nullable: true },
+          precioFinal: {
+            type: "integer",
+            description: "Precio que se cobra: la promoción si existe y es menor, si no el precio",
+          },
           stock: { type: "integer" },
           imagen: { type: "string", nullable: true },
+          actualizadoEn: {
+            type: "string",
+            format: "date-time",
+            description: "Versión del producto; se devuelve tal cual en el PUT",
+          },
         },
       },
       ContactoPedido: contactoPedido,

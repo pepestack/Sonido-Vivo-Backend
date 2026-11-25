@@ -55,8 +55,10 @@ async function enTransaccion(operacion) {
 
 async function bloquearProductos(db, codigos) {
   const { rows } = await db.query(
-    `SELECT id, codigo, nombre, precio, precio_promocional, stock, activo
-     FROM productos WHERE codigo = ANY($1::text[]) ORDER BY id FOR UPDATE`,
+    `SELECT p.id, p.codigo, p.nombre, p.precio_final, p.stock,
+            p.activo AND c.activo AS activo
+     FROM productos p JOIN categorias c ON c.id = p.categoria_id
+     WHERE p.codigo = ANY($1::text[]) ORDER BY p.id FOR UPDATE OF p`,
     [codigos],
   );
   return rows;
