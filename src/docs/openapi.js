@@ -85,6 +85,45 @@ const errorProducto409 = error("Código repetido", {
   detalles: { codigo: "Código repetido" },
 });
 
+const parametroIdPedido = {
+  ...parametroId,
+  description: "Id numérico del pedido",
+  schema: { type: "integer", minimum: 1, maximum: 2147483647 },
+};
+const errorPedido400 = error("Id o datos del pedido inválidos", {
+  error: "El máximo es de cinco unidades por producto",
+  detalles: { codigo: "GA001" },
+});
+const errorPedido404 = error("Pedido fuera del alcance del usuario, inexistente o producto no disponible", {
+  error: "Pedido no encontrado",
+});
+const errorPedido409 = error("Stock insuficiente o pago simulado rechazado", {
+  error: "Stock insuficiente",
+  detalles: { codigo: "GA001" },
+});
+
+const dinero = { type: "integer", minimum: 0, description: "Monto en pesos chilenos" };
+const contactoPedido = {
+  type: "object",
+  required: ["nombre", "apellido", "correo"],
+  properties: {
+    nombre: { type: "string", minLength: 1, maxLength: 50 },
+    apellido: { type: "string", minLength: 1, maxLength: 100 },
+    correo: { type: "string", format: "email", maxLength: 100 },
+  },
+};
+const entregaPedido = {
+  type: "object",
+  required: ["tipo"],
+  properties: {
+    tipo: { type: "string", enum: ["retiro", "despacho"] },
+    region: { type: "string", maxLength: 100 },
+    comuna: { type: "string", maxLength: 100 },
+    direccion: { type: "string", maxLength: 300 },
+  },
+  description: "Región, comuna y dirección son obligatorias cuando el tipo es despacho.",
+};
+
 module.exports = {
   openapi: "3.0.3",
   info: {
@@ -103,6 +142,10 @@ module.exports = {
       description:
         "Catálogo de instrumentos, equipos y accesorios. Leer es público; " +
         "Administrador y Vendedor crean y editan; solo el Administrador elimina.",
+    },
+    {
+      name: "Pedidos",
+      description: "Compra como invitado o con sesión, consulta del historial y gestión de estados.",
     },
     {
       name: "KaijuApp",
@@ -292,6 +335,102 @@ module.exports = {
         },
       },
     },
+    "/api/v1/pedidos": {
+      post: {
+        tags: ["Pedidos"],
+        summary: "Crea un pedido y devuelve el comprobante",
+        description:
+          "Sin encabezado Authorization crea un pedido de invitado. Si se envía un token, " +
+          "debe ser válido y el usuario se toma de la sesión. Máximo cinco unidades por código, " +
+          "incluidas líneas repetidas. Se aplican precios y stock del catálogo y $6.767 CLP " +
+          "por despacho. El retiro es gratuito. El pago es simulado.",
+        security: [{ bearerAuth: [] }, {}],
+        requestBody: json(ref("PedidoEntrada"), {
+          items: [{ codigo: "GA001", cantidad: 2 }],
+          cliente: { nombre: "Camila", apellido: "Rojas", correo: "camila@example.com" },
+          entrega: { tipo: "retiro" },
+          pagoSimulado: "aprobado",
+        }),
+        responses: {
+          201: ok("Pedido creado en estado En preparación", ref("Pedido")),
+          400: errorPedido400,
+          401: respuestas[401],
+          404: error("Producto inexistente o inactivo", { error: "Producto no disponible" }),
+          409: errorPedido409,
+        },
+      },
+      get: {
+        tags: ["Pedidos"],
+        summary: "Lista pedidos del más reciente al más antiguo",
+        description: "Cliente ve sus pedidos. Administrador y Vendedor ven todos, incluidos los de invitados.",
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: ok("Listado de pedidos", { type: "array", items: ref("Pedido") }),
+          401: respuestas[401],
+          403: respuestas[403],
+        },
+      },
+    },
+    "/api/v1/pedidos/{id}": {
+      parameters: [parametroIdPedido],
+      get: {
+        tags: ["Pedidos"],
+        summary: "Consulta el detalle de un pedido",
+        description: "Cliente solo puede consultar pedidos propios. Administrador y Vendedor pueden consultar cualquier pedido.",
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: ok("Detalle del pedido", ref("Pedido")),
+          400: error("Id inválido", { error: "Id inválido" }),
+          401: respuestas[401],
+          403: respuestas[403],
+          404: errorPedido404,
+        },
+      },
+      put: {
+        tags: ["Pedidos"],
+        summary: "Avanza el estado del pedido",
+        description:
+          "Administrador o Vendedor. Para un despacho, el pedido pasa de En preparación a Despachado " +
+          "y luego a Entregado. Para un retiro, pasa directamente de En preparación a Entregado. " +
+          "Los pedidos Cancelados y Entregados son terminales.",
+        security: [{ bearerAuth: [] }],
+        requestBody: json(
+          {
+            type: "object",
+            required: ["estado"],
+            properties: { estado: { type: "string", enum: ["Despachado", "Entregado"] } },
+          },
+          { estado: "Despachado" },
+        ),
+        responses: {
+          200: ok("Estado actualizado", ref("Pedido")),
+          400: error("Id o estado inválido", { error: "El estado debe ser Despachado o Entregado" }),
+          401: respuestas[401],
+          403: respuestas[403],
+          404: errorPedido404,
+          409: error("Transición no permitida", { error: "El pedido no puede pasar a ese estado" }),
+        },
+      },
+      delete: {
+        tags: ["Pedidos"],
+        summary: "Cancela lógicamente un pedido En preparación",
+        description:
+          "Solo Administrador. Conserva el pedido y sus ítems y repone en una sola transacción " +
+          "las unidades descontadas al crearlo. Una segunda cancelación devuelve 409 y el stock se repone una sola vez. " +
+          "Los pedidos Despachados, Entregados y cualquier otro estado distinto de En preparación devuelven 409.",
+        security: [{ bearerAuth: [] }],
+        responses: {
+          204: { description: "Pedido cancelado" },
+          400: error("Id inválido", { error: "Id inválido" }),
+          401: respuestas[401],
+          403: respuestas[403],
+          404: errorPedido404,
+          409: error("El pedido no está En preparación", {
+            error: "Solo se pueden cancelar pedidos En preparación",
+          }),
+        },
+      },
+    },
     "/api/v1/kaiju/auth/login": {
       post: {
         tags: ["KaijuApp"],
@@ -446,6 +585,59 @@ module.exports = {
           precio: { type: "integer" },
           stock: { type: "integer" },
           imagen: { type: "string", nullable: true },
+        },
+      },
+      ContactoPedido: contactoPedido,
+      EntregaPedido: entregaPedido,
+      PedidoEntrada: {
+        type: "object",
+        required: ["items", "cliente", "entrega"],
+        properties: {
+          items: {
+            type: "array",
+            minItems: 1,
+            items: {
+              type: "object",
+              required: ["codigo", "cantidad"],
+              properties: {
+                codigo: { type: "string", pattern: "^[A-Z0-9-]{2,10}$" },
+                cantidad: { type: "integer", minimum: 1, maximum: 5 },
+              },
+            },
+          },
+          cliente: ref("ContactoPedido"),
+          entrega: ref("EntregaPedido"),
+          pagoSimulado: { type: "string", enum: ["aprobado", "rechazado"], default: "aprobado" },
+        },
+      },
+      Pedido: {
+        type: "object",
+        properties: {
+          id: { type: "integer" },
+          usuarioId: { type: "integer", nullable: true },
+          fecha: { type: "string", format: "date-time" },
+          estado: {
+            type: "string",
+            enum: ["En preparación", "Confirmado", "Despachado", "Entregado", "Cancelado"],
+          },
+          cliente: { ...contactoPedido, nullable: true },
+          entrega: { ...entregaPedido, nullable: true },
+          subtotal: { ...dinero, nullable: true },
+          despacho: { ...dinero, nullable: true },
+          total: dinero,
+          items: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                id: { type: "string", description: "Código de catálogo al comprar" },
+                productoId: { type: "integer" },
+                nombre: { type: "string" },
+                precio: dinero,
+                cantidad: { type: "integer", minimum: 1 },
+              },
+            },
+          },
         },
       },
       Error: {

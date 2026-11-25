@@ -94,8 +94,24 @@ Para detener el servidor, presione:
 | `POST` | `/api/v1/productos` | Administrador, Vendedor | Agrega un producto al catálogo |
 | `PUT` | `/api/v1/productos/:id` | Administrador, Vendedor | Modifica un producto (incluido su stock) |
 | `DELETE` | `/api/v1/productos/:id` | Administrador | Saca un producto del catálogo (eliminación lógica) |
+| `POST` | `/api/v1/pedidos` | Público, JWT opcional | Compra como invitado o con cuenta y devuelve el comprobante |
+| `GET` | `/api/v1/pedidos` | Cliente, Administrador, Vendedor | Lista los pedidos propios del Cliente o todos para el personal autorizado |
+| `GET` | `/api/v1/pedidos/:id` | Cliente, Administrador, Vendedor | Devuelve el detalle dentro del mismo alcance |
+| `PUT` | `/api/v1/pedidos/:id` | Administrador, Vendedor | Avanza el estado de entrega |
+| `DELETE` | `/api/v1/pedidos/:id` | Administrador | Cancela un pedido En preparación y repone el stock descontado |
 
 Las rutas protegidas requieren el encabezado `Authorization: Bearer <token>`. Sin token o con un token inválido o expirado responden `401`; con un rol sin permiso responden `403`.
+
+### Pedidos
+
+- La API recibe `items` con `codigo` de catálogo y `cantidad`, hasta cinco unidades acumuladas por código. Obtiene la identidad del JWT cuando se envía. Para invitados, el comprobante se entrega en la respuesta `201`.
+- El servidor aplica `productos.precio_promocional` cuando está definido y es inferior al precio base. Calcula el total con $6.767 CLP por despacho o retiro gratuito. `pagoSimulado` acepta `aprobado` o `rechazado`.
+- `DELETE` conserva el pedido y sus ítems. Solo permite cancelar si está **En preparación**. Si hubo descuento de inventario, lo repone en la misma transacción del cambio a **Cancelado**. Otros estados, incluidos los ya cancelados, devuelven `409`.
+- Los permisos de Cajero para pedidos quedan pendientes de contrastar con la ERS. El esquema conserva los roles y asignaciones ya existentes.
+
+Para habilitar las tablas o columnas nuevas en una base existente, aplica el esquema en una sola transacción con `psql -d sonido_vivo -v ON_ERROR_STOP=1 -1 -f src/db/schema.sql`. Si la base todavía no tiene catálogo, `src/db/catalogo.sql` permite cargarlo.
+
+Ejecuta `npm test` para las pruebas sin base de datos. Para incluir las pruebas HTTP y PostgreSQL, define `TEST_DATABASE_URL` con una base de pruebas cuyo usuario pueda crear esquemas. La suite crea y elimina su propio esquema temporal.
 
 ## Estado del proyecto
 
@@ -113,7 +129,7 @@ Las rutas protegidas requieren el encabezado `Authorization: Bearer <token>`. Si
 | Documentación con Swagger/OpenAPI | ✅ | ✅ | ✅ |
 | Inicio de sesión y registro del frontend conectados a la API | ⬜ | ⬜ | ⬜ |
 | CRUD del catálogo (instrumentos, equipos y accesorios) | ✅ | ✅ | ✅ |
-| Pedidos: no puede superar el stock (`409`); el cliente ve solo los suyos | ⬜ | ⬜ | ⬜ |
+| Pedidos: no puede superar el stock (`409`); el cliente ve solo los suyos | ✅ | ✅ | ✅ |
 
 ✅ Hecho · 🟨 En avance · ⬜ Pendiente
 
@@ -140,10 +156,12 @@ La API está documentada con OpenAPI 3 y se puede probar desde el navegador con 
 | Swagger UI | http://localhost:3000/api-docs | `<URL de Lambda/EC2>/api-docs` |
 | Especificación JSON | http://localhost:3000/api-docs.json | `<URL de Lambda/EC2>/api-docs.json` |
 
-La documentación se divide en tres secciones:
+La documentación incluye estas secciones:
 
 - **Autenticación**: login y registro de Sonido Vivo.
 - **Usuarios**: CRUD de usuarios de Sonido Vivo (solo Administrador).
+- **Productos**: consulta pública y administración del catálogo.
+- **Pedidos**: compra, historial, cambios de estado y cancelación.
 - **KaijuApp**: login y CRUD de usuarios de KaijuApp (solo para Administrador de Kaiju).
 
 ### Probar rutas protegidas
