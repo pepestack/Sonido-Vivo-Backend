@@ -23,14 +23,6 @@ CREATE TABLE IF NOT EXISTS usuarios (
   creado_en        TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );
 
--- Migración: el caso Sonido Vivo solo define Administrador, Vendedor y Cliente.
--- En bases ya creadas, los usuarios con rol Cajero pasan a Vendedor y se elimina el rol.
-UPDATE usuarios
-SET rol_id = (SELECT id FROM roles WHERE nombre = 'Vendedor')
-WHERE rol_id = (SELECT id FROM roles WHERE nombre = 'Cajero');
-
-DELETE FROM roles WHERE nombre = 'Cajero';
-
 -- Categorías del catálogo, administrables desde el frontend.
 -- Una categoría con productos no se borra: se desactiva con "activo".
 CREATE TABLE IF NOT EXISTS categorias (
@@ -67,16 +59,29 @@ CREATE TABLE IF NOT EXISTS productos (
 
 CREATE INDEX IF NOT EXISTS productos_categoria_id_idx ON productos (categoria_id);
 
--- Pedidos de los clientes. El total se calcula en el servidor al crear el pedido.
+-- Precio final en CLP cuando hay promoción. Se aplica si es menor que el precio base.
+ALTER TABLE productos
+  ADD COLUMN IF NOT EXISTS precio_promocional INTEGER CHECK (precio_promocional >= 0);
+
+-- Pedidos de clientes e invitados. El total se calcula en el servidor.
 CREATE TABLE IF NOT EXISTS pedidos (
   id             SERIAL PRIMARY KEY,
-  usuario_id     INTEGER      NOT NULL REFERENCES usuarios (id),
+  usuario_id     INTEGER      REFERENCES usuarios (id),
   estado         VARCHAR(20)  NOT NULL DEFAULT 'pendiente'
                  CHECK (estado IN ('pendiente', 'confirmado', 'enviado', 'entregado', 'cancelado')),
   total          INTEGER      NOT NULL CHECK (total >= 0),
   creado_en      TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
   actualizado_en TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );
+
+-- Los pedidos previos no reponen inventario sin registro del descuento.
+ALTER TABLE pedidos
+  ALTER COLUMN usuario_id DROP NOT NULL,
+  ADD COLUMN IF NOT EXISTS cliente JSONB,
+  ADD COLUMN IF NOT EXISTS entrega JSONB,
+  ADD COLUMN IF NOT EXISTS subtotal INTEGER CHECK (subtotal >= 0),
+  ADD COLUMN IF NOT EXISTS despacho INTEGER CHECK (despacho >= 0),
+  ADD COLUMN IF NOT EXISTS inventario_descontado BOOLEAN NOT NULL DEFAULT FALSE;
 
 CREATE INDEX IF NOT EXISTS pedidos_usuario_id_idx ON pedidos (usuario_id);
 
@@ -89,6 +94,10 @@ CREATE TABLE IF NOT EXISTS pedido_items (
   precio_unitario INTEGER NOT NULL CHECK (precio_unitario >= 0),
   PRIMARY KEY (pedido_id, producto_id)
 );
+
+ALTER TABLE pedido_items
+  ADD COLUMN IF NOT EXISTS nombre_producto VARCHAR(100),
+  ADD COLUMN IF NOT EXISTS codigo_producto VARCHAR(10);
 
 -- ===== KaijuApp (DSY1105) =====
 -- Usuarios de KaijuApp, separados de los de Sonido Vivo (otros roles y otros datos).
