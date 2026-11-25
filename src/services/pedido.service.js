@@ -21,12 +21,6 @@ const esObjeto = (valor) => valor !== null && typeof valor === "object" && !Arra
 const texto = (valor) => typeof valor === "string" ? valor.trim() : "";
 const presentar = (pedido) => ({ ...pedido, estado: ESTADOS[pedido.estado] });
 
-function idPedido(valor) {
-  const id = parsearId(valor);
-  if (id > MAX_INT) throw errorHttp(400, "Id inválido");
-  return id;
-}
-
 function leerContacto(valor) {
   const nombre = texto(valor?.nombre);
   const apellido = texto(valor?.apellido);
@@ -113,13 +107,13 @@ async function listar(usuario) {
 }
 
 async function obtener(id, usuario) {
-  const pedido = await pedidos.buscarPorId(idPedido(id), usuario.rol === "Cliente" ? usuario.id : null);
+  const pedido = await pedidos.buscarPorId(parsearId(id), usuario.rol === "Cliente" ? usuario.id : null);
   if (!pedido) throw errorHttp(404, "Pedido no encontrado");
   return presentar(pedido);
 }
 
 async function actualizar(id, cuerpo) {
-  const idValido = idPedido(id);
+  const idValido = parsearId(id);
   const estado = ESTADOS_ACTUALIZABLES.get(cuerpo?.estado);
   if (!estado) throw errorHttp(400, "El estado debe ser Despachado o Entregado");
 
@@ -138,7 +132,7 @@ async function actualizar(id, cuerpo) {
 }
 
 async function cancelar(id) {
-  const idValido = idPedido(id);
+  const idValido = parsearId(id);
   return pedidos.enTransaccion(async (db) => {
     const pedido = await pedidos.bloquearPedido(db, idValido);
     if (!pedido) throw errorHttp(404, "Pedido no encontrado");

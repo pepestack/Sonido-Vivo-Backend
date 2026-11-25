@@ -92,10 +92,13 @@ function validarRegistro(d = {}) {
   return errores;
 }
 
+// Máximo de una columna INTEGER de PostgreSQL: un id mayor haría fallar la consulta (500).
+const MAX_ID = 2147483647;
+
 // El id llega como texto en la URL; solo se aceptan enteros positivos.
 function parsearId(valor) {
   const id = Number(valor);
-  if (!/^\d+$/.test(String(valor)) || !Number.isSafeInteger(id) || id <= 0)
+  if (!/^\d+$/.test(String(valor)) || !Number.isSafeInteger(id) || id <= 0 || id > MAX_ID)
     throw errorHttp(400, "Id inválido");
   return id;
 }
