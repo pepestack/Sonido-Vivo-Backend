@@ -190,6 +190,28 @@ module.exports = {
         },
       },
     },
+    "/api/v1/auth/sesion": {
+      get: {
+        tags: ["Autenticación"],
+        summary: "Confirma que la sesión sigue válida y devuelve el rol actual",
+        description:
+          "El frontend lo llama al abrir el panel. Responde 401 si el token falta, " +
+          "venció o la cuenta fue desactivada; el rol es el actual de la base de datos.",
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: ok("Sesión válida", {
+            type: "object",
+            properties: {
+              usuario: {
+                type: "object",
+                properties: { id: { type: "integer" }, rol: ref("Rol") },
+              },
+            },
+          }),
+          401: respuestas[401],
+        },
+      },
+    },
     "/api/v1/usuarios": {
       get: {
         tags: ["Usuarios"],
