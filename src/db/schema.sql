@@ -1,3 +1,4 @@
+SET client_encoding = 'UTF8';
 CREATE TABLE IF NOT EXISTS roles (
   id     SMALLSERIAL PRIMARY KEY,
   nombre VARCHAR(30) NOT NULL UNIQUE
