@@ -190,6 +190,28 @@ module.exports = {
         },
       },
     },
+    "/api/v1/auth/sesion": {
+      get: {
+        tags: ["Autenticación"],
+        summary: "Confirma que la sesión sigue válida y devuelve el rol actual",
+        description:
+          "El frontend lo llama al abrir el panel. Responde 401 si el token falta, " +
+          "venció o la cuenta fue desactivada; el rol es el actual de la base de datos.",
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: ok("Sesión válida", {
+            type: "object",
+            properties: {
+              usuario: {
+                type: "object",
+                properties: { id: { type: "integer" }, rol: ref("Rol") },
+              },
+            },
+          }),
+          401: respuestas[401],
+        },
+      },
+    },
     "/api/v1/usuarios": {
       get: {
         tags: ["Usuarios"],
@@ -239,7 +261,9 @@ module.exports = {
         summary: "Modifica los datos y el rol de un usuario",
         description:
           "Se envían todos los campos. El RUN y la contraseña no se modifican. " +
-          "Un administrador no puede cambiar su propio rol (409).",
+          "`activo` es opcional: true reactiva una cuenta desactivada y false la desactiva; " +
+          "si no viene, no cambia. Un administrador no puede cambiar su propio rol ni " +
+          "desactivarse a sí mismo (409).",
         security: [{ bearerAuth: [] }],
         requestBody: json(ref("UsuarioActualizar"), { ...ejemploUsuario, rol: "Cliente" }),
         responses: {
@@ -248,7 +272,7 @@ module.exports = {
           401: respuestas[401],
           403: respuestas[403],
           404: respuestas[404],
-          409: error("Correo duplicado o intento de cambiar el propio rol", {
+          409: error("Correo duplicado, o intento de cambiar el propio rol o desactivarse", {
             error: "No puedes cambiar tu propio rol",
           }),
         },
@@ -283,6 +307,9 @@ module.exports = {
       post: {
         tags: ["Productos"],
         summary: "Agrega un producto al catálogo",
+        description:
+          "Si el código pertenece a un producto desactivado, lo reactiva con estos datos " +
+          "(mismo id). Si pertenece a un producto activo responde 409.",
         security: [{ bearerAuth: [] }],
         requestBody: json(ref("ProductoEntrada"), ejemploProducto),
         responses: {
@@ -308,15 +335,25 @@ module.exports = {
       put: {
         tags: ["Productos"],
         summary: "Modifica un producto (se envían todos los campos)",
+        description:
+          "Exige `actualizadoEn` tal como vino en el GET. Si otra edición o una venta " +
+          "modificó el producto desde entonces, responde 409 y hay que recargarlo.",
         security: [{ bearerAuth: [] }],
-        requestBody: json(ref("ProductoEntrada"), { ...ejemploProducto, stock: 6 }),
+        requestBody: json(ref("ProductoEntrada"), {
+          ...ejemploProducto,
+          stock: 6,
+          actualizadoEn: "2026-11-25T14:03:12.345Z",
+        }),
         responses: {
           200: ok("Producto actualizado", ref("Producto")),
           400: errorProducto400,
           401: respuestas[401],
           403: respuestas[403],
           404: errorProducto404,
-          409: errorProducto409,
+          409: error("Código repetido o el producto cambió desde que se leyó", {
+            error: "El producto fue modificado por otra operación, recarga e intenta de nuevo",
+            detalles: { actualizadoEn: "Versión desactualizada" },
+          }),
         },
       },
       delete: {
@@ -446,10 +483,17 @@ module.exports = {
             error: "Revisa los datos",
             detalles: { correo: "Ingresa un correo válido" },
           }),
-          401: error("Usuario inexistente o inactivo, o contraseña incorrecta", {
-            error: "Usuario no encontrado",
-            detalles: { correo: "No existe un usuario con este correo" },
-          }),
+          401: error(
+            "Usuario inexistente o inactivo, o contraseña incorrecta. La respuesta es " +
+              "idéntica en los tres casos para no revelar qué correos tienen cuenta.",
+            {
+              error: "Correo o contraseña incorrectos",
+              detalles: {
+                correo: "Correo o contraseña incorrectos",
+                contrasena: "Correo o contraseña incorrectos",
+              },
+            },
+          ),
         },
       },
     },
@@ -467,6 +511,9 @@ module.exports = {
       post: {
         tags: ["KaijuApp"],
         summary: "Crea un usuario de KaijuApp",
+        description:
+          "Si el correo pertenece a un usuario desactivado, lo reactiva con estos datos " +
+          "(mismo id). Si pertenece a un usuario activo responde 409.",
         security: [{ bearerAuth: [] }],
         requestBody: json(ref("KaijuUsuarioCrear"), {
           nombre: "Vendedor Nuevo",
@@ -570,6 +617,19 @@ module.exports = {
           precio: { type: "integer", minimum: 0, maximum: 100000000, description: "Pesos chilenos" },
           stock: { type: "integer", minimum: 0, maximum: 1000000 },
           imagen: { type: "string", maxLength: 500, nullable: true, description: "Ruta o URL" },
+          precioPromocional: {
+            type: "integer",
+            minimum: 0,
+            nullable: true,
+            description: "Precio de oferta en CLP; debe ser menor que precio. null = sin promoción",
+          },
+          actualizadoEn: {
+            type: "string",
+            format: "date-time",
+            description:
+              "Solo en PUT y obligatorio: el actualizadoEn recibido al leer el producto. " +
+              "Si el producto cambió desde entonces (otra edición o una venta) responde 409.",
+          },
         },
       },
       Producto: {
@@ -583,8 +643,18 @@ module.exports = {
           descripcion: { type: "string", nullable: true },
           categoria: { type: "string" },
           precio: { type: "integer" },
+          precioPromocional: { type: "integer", nullable: true },
+          precioFinal: {
+            type: "integer",
+            description: "Precio que se cobra: la promoción si existe y es menor, si no el precio",
+          },
           stock: { type: "integer" },
           imagen: { type: "string", nullable: true },
+          actualizadoEn: {
+            type: "string",
+            format: "date-time",
+            description: "Versión del producto; se devuelve tal cual en el PUT",
+          },
         },
       },
       ContactoPedido: contactoPedido,
@@ -722,7 +792,17 @@ module.exports = {
       UsuarioActualizar: {
         allOf: [
           ref("DatosUsuario"),
-          { type: "object", required: ["rol"], properties: { rol: ref("Rol") } },
+          {
+            type: "object",
+            required: ["rol"],
+            properties: {
+              rol: ref("Rol"),
+              activo: {
+                type: "boolean",
+                description: "Opcional: true reactiva, false desactiva; si no viene, no cambia",
+              },
+            },
+          },
         ],
       },
       RegistroResponse: {

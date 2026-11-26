@@ -10,4 +10,10 @@ async function registrarUsuario(req, res) {
   res.status(201).json(resultado);
 }
 
-module.exports = { iniciarSesion, registrarUsuario };
+// El middleware autenticar ya validó el token y consultó la BD: si la cuenta
+// se desactivó respondió 401, y req.usuario trae el rol actual.
+async function obtenerSesion(req, res) {
+  res.status(200).json({ usuario: req.usuario });
+}
+
+module.exports = { iniciarSesion, registrarUsuario, obtenerSesion };

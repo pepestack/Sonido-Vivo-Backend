@@ -77,7 +77,11 @@ async function main() {
                    (SELECT MAX(id) FROM kaiju_usuarios))`,
   );
   console.log("Contraseña:1234");
-  await pool.end();
 }
 
-main();
+main()
+  .catch((error) => {
+    console.error(error);
+    process.exitCode = 1;
+  })
+  .finally(() => pool.end());

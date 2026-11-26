@@ -24,10 +24,15 @@ function normalizar(cuerpo) {
     precio: cuerpo.precio,
     stock: cuerpo.stock,
     imagen: opcional(limpiar(cuerpo.imagen)),
+    precioPromocional: opcional(cuerpo.precioPromocional),
+    actualizadoEn: cuerpo.actualizadoEn,
   };
 }
 
-function validar(d) {
+const fechaValida = (valor) =>
+  typeof valor === "string" && !Number.isNaN(Date.parse(valor));
+
+function validar(d, { conVersion }) {
   const errores = {};
 
   if (typeof d.codigo !== "string" || !/^[A-Z0-9-]{2,10}$/.test(d.codigo))
@@ -44,13 +49,23 @@ function validar(d) {
     errores.stock = `El stock debe ser un entero entre 0 y ${STOCK_MAXIMO}`;
   if (d.imagen !== null && !textoValido(d.imagen, 500))
     errores.imagen = "Imagen de máximo 500 caracteres";
+  // Una promoción igual o mayor al precio no se cobraría: se rechaza para no confundir.
+  if (
+    d.precioPromocional !== null &&
+    (!Number.isInteger(d.precioPromocional) ||
+      d.precioPromocional < 0 ||
+      (Number.isInteger(d.precio) && d.precioPromocional >= d.precio))
+  )
+    errores.precioPromocional = "El precio promocional debe ser un entero menor que el precio";
+  if (conVersion && !fechaValida(d.actualizadoEn))
+    errores.actualizadoEn = "Envía el actualizadoEn que recibiste al leer el producto";
 
   return errores;
 }
 
-async function prepararDatos(cuerpo = {}) {
+async function prepararDatos(cuerpo = {}, opciones = { conVersion: false }) {
   const datos = normalizar(cuerpo ?? {});
-  const errores = validar(datos);
+  const errores = validar(datos, opciones);
 
   if (!errores.categoria && !(await productos.existeCategoria(datos.categoria)))
     errores.categoria = "La categoría no existe";
@@ -90,14 +105,19 @@ async function crear(cuerpo) {
 
 async function actualizar(id, cuerpo) {
   const idProducto = parsearId(id);
-  const datos = await prepararDatos(cuerpo);
+  const datos = await prepararDatos(cuerpo, { conVersion: true });
+  let producto;
   try {
-    const producto = await productos.actualizar(idProducto, datos);
-    if (!producto) throw errorHttp(404, "Producto no encontrado");
-    return producto;
+    producto = await productos.actualizar(idProducto, datos);
   } catch (error) {
     throw traducirError(error);
   }
+  if (producto) return producto;
+  if (await productos.existe(idProducto))
+    throw errorHttp(409, "El producto fue modificado por otra operación, recarga e intenta de nuevo", {
+      actualizadoEn: "Versión desactualizada",
+    });
+  throw errorHttp(404, "Producto no encontrado");
 }
 
 async function eliminar(id) {

@@ -13,6 +13,7 @@ services:
     volumes:
       - db-data:/var/lib/postgresql/data
       - ./src/db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./src/db/catalogo.sql:/docker-entrypoint-initdb.d/02-catalogo.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d sonido_vivo"]
       interval: 5s
